@@ -236,6 +236,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .win { background: var(--y); color: var(--y-ink); border-radius: 16px; padding: 12px 14px; text-align: center; display: flex; flex-direction: column; }
 .win b { font: italic 800 28px/1 var(--display); }
 .center-l { align-self: center; text-decoration: none; color: var(--mute); }
+/* Móvil: evita que los elementos se aplasten cuando el contenido excede la pantalla */
+.screen.staff > *, .login > *, .layer > *, .sheet > * { flex-shrink: 0; }
+.scanner { max-height: 56dvh; }
 
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 @media (max-height: 700px) { .login .display { font-size: 52px; } .pad button { height: 46px; } }
