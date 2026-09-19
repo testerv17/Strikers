@@ -176,16 +176,66 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 /* Vista del mesero */
 .screen.staff { overflow-y: auto; }
-.s-head { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }
+.s-head { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
 .s-head .logo { font-size: 30px; }
-.s-sub { font-size: 24px; margin: 26px 0 4px; }
-.cam { margin: 12px 0; } .cam video { width: 100%; border-radius: 16px; background: #000; margin-bottom: 8px; }
-.results { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; }
-.res { border-radius: 16px; padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; animation: rise .25s; }
-.res b { font-size: 17px; } .res span { font-size: 14px; color: #dcdad3; }
-.res.ok { background: rgba(88, 210, 122, .14); border: 1px solid rgba(88, 210, 122, .5); }
-.res.bad { background: rgba(255, 116, 104, .12); border: 1px solid rgba(255, 116, 104, .5); }
-.res strong { color: var(--y); }
+.s-sub { font-size: 24px; margin: 26px 0 6px; }
+.demo-tag.static { position: static; margin: 4px 0 14px; }
+.seg { display: grid; grid-template-columns: 1fr 1fr; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 4px; margin-bottom: 16px; }
+.seg button { background: none; border: 0; border-radius: 10px; padding: 10px; font-weight: 700; color: var(--mute); }
+.seg button.on { background: var(--y); color: var(--y-ink); }
+
+.scanner { position: relative; aspect-ratio: 1; border-radius: 24px; background: #0a0a0a; border: 1px solid var(--line); overflow: hidden; display: grid; place-items: center; margin-bottom: 12px; }
+.scanner video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; }
+.scanner.live video { opacity: 1; }
+.scan-hint { color: var(--mute); text-align: center; padding: 0 44px; font-size: 14px; }
+.scanner.live .scan-hint { display: none; }
+.frame { position: absolute; inset: 15%; pointer-events: none; }
+.frame i { position: absolute; width: 30px; height: 30px; border: 4px solid var(--y); }
+.frame .tl { top: 0; left: 0; border-right: 0; border-bottom: 0; border-top-left-radius: 12px; }
+.frame .tr { top: 0; right: 0; border-left: 0; border-bottom: 0; border-top-right-radius: 12px; }
+.frame .bl { bottom: 0; left: 0; border-right: 0; border-top: 0; border-bottom-left-radius: 12px; }
+.frame .br { bottom: 0; right: 0; border-left: 0; border-top: 0; border-bottom-right-radius: 12px; }
+.or { display: flex; align-items: center; gap: 12px; color: var(--mute); font-size: 12.5px; margin: 16px 0 12px; }
+.or::before, .or::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+.codebar { display: flex; gap: 10px; align-items: stretch; }
+.codebar .field { margin: 0; flex: 1; min-width: 0; text-transform: uppercase; }
+.codebar .btn.sm { border-radius: 14px; padding: 0 20px; }
+.row.pick { width: 100%; background: none; border-left: 0; border-right: 0; border-bottom: 0; text-align: left; }
+.row.pick i { font-style: normal; font-size: 24px; color: var(--mute); }
+
+.counts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.counts div { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 14px 16px; display: flex; flex-direction: column; }
+.counts b { font: italic 800 44px/1 var(--display); color: var(--y); }
+.counts span { color: var(--mute); font-size: 13px; }
+.ev { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); }
+.ev > div { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.ev span:not(.ev-i) { color: var(--mute); font-size: 13px; }
+.ev time { color: var(--mute); font-size: 13px; }
+.ev-i { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; }
+.ev-i.v { background: rgba(88, 210, 122, .16); color: var(--ok); }
+.ev-i.r { background: rgba(255, 194, 14, .16); color: var(--y); }
+
+.sheet-wrap { position: absolute; inset: 0; z-index: 30; background: rgba(0, 0, 0, .66); display: flex; align-items: flex-end; animation: fade .2s; }
+.sheet { width: 100%; max-height: 92%; overflow-y: auto; background: var(--surface); border-top: 1px solid var(--line); border-radius: 26px 26px 0 0; padding: 22px 20px calc(18px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 10px; animation: rise .28s ease-out; }
+.sheet .btn + .btn { margin-top: 0; }
+.who { display: flex; gap: 14px; align-items: center; }
+.avatar { width: 52px; height: 52px; border-radius: 50%; background: var(--y); color: var(--y-ink); display: grid; place-items: center; font: italic 800 28px var(--display); flex: none; }
+.who h3 { font-size: 30px; line-height: 1; }
+.dots { display: flex; gap: 6px; margin: 4px 0 2px; }
+.dot { flex: 1; height: 10px; border-radius: 99px; background: #333; }
+.dot.on { background: var(--y); }
+.dot.key { outline: 1.5px solid var(--y); outline-offset: 1px; }
+.promo { font-size: 15.5px; }
+.warn { background: rgba(255, 194, 14, .12); border: 1px solid rgba(255, 194, 14, .5); border-radius: 12px; padding: 10px 12px; font-size: 14px; }
+.cpv { display: flex; gap: 14px; align-items: center; }
+.cpv-l { width: 88px; height: 66px; border-radius: 14px; background: var(--y); color: var(--y-ink); display: grid; place-items: center; font: italic 800 36px var(--display); flex: none; }
+.cpv.off .cpv-l { background: #555; color: #ddd; }
+.cpv h3 { font-size: 30px; line-height: 1; }
+.ok-ico { width: 64px; height: 64px; border-radius: 50%; margin: 4px auto 0; display: grid; place-items: center; font-size: 34px; font-weight: 800; background: rgba(88, 210, 122, .18); color: var(--ok); }
+.ok-ico.bad { background: rgba(255, 116, 104, .16); color: var(--err); }
+.win { background: var(--y); color: var(--y-ink); border-radius: 16px; padding: 12px 14px; text-align: center; display: flex; flex-direction: column; }
+.win b { font: italic 800 28px/1 var(--display); }
+.center-l { align-self: center; text-decoration: none; color: var(--mute); }
 
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 @media (max-height: 700px) { .login .display { font-size: 52px; } .pad button { height: 46px; } }
