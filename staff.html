@@ -11,8 +11,13 @@
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-  <main class="app"><div class="screen staff" id="staff"></div></main>
+  <main class="app">
+    <div class="screen staff" id="staff"></div>
+    <div id="sheetRoot"></div>
+  </main>
 
+  <!-- jsQR: respaldo del escaneo para navegadores sin BarcodeDetector (iPhone/Safari) -->
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/config.js"></script>
   <script src="js/shared.js"></script>
