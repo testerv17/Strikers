@@ -13,6 +13,7 @@
   /* ------------------------------------------------------------------ DEMO */
   const KEY = 'strikers_demo_v2';
   const SEEN_KEY = 'strikers_seen_coupons';
+  const STAFF_KEY = 'strikers_staff_ok';
 
   // Cuentas de ejemplo (login: teléfono + código fijo de config.js)
   const DEMO_SEED = [
@@ -47,7 +48,7 @@
   }
 
   function freshDb() {
-    const d = { seq: 500, users: {}, coupons: [], reservations: [], matches: buildMatches(), session: null };
+    const d = { seq: 500, users: {}, coupons: [], reservations: [], matches: buildMatches(), session: null, log: [] };
     DEMO_SEED.forEach(s => {
       d.users[s.phone] = { id: s.phone, phone: s.phone, name: s.name, customer_code: s.code, referral_code: s.ref, visits_total: s.visits, referred_by: null };
     });
@@ -70,6 +71,7 @@
     let d = null;
     try { d = JSON.parse(localStorage.getItem(KEY)); } catch { /* vacío */ }
     if (!d) { d = freshDb(); save(d); }
+    if (!d.log) d.log = [];
     return d;
   }
   const save = d => localStorage.setItem(KEY, JSON.stringify(d));
@@ -160,27 +162,57 @@
     },
 
     /* --- Mesero --- */
-    async staffSession() { return true; },
-    async staffLogin() { },
-    async staffSignOut() { },
+    async staffLogin(pin) {
+      await delay(250);
+      if (pin !== C.DEMO_STAFF_PIN) throw new Error('PIN incorrecto');
+      sessionStorage.setItem(STAFF_KEY, '1');
+    },
+    async staffSession() { return sessionStorage.getItem(STAFF_KEY) === '1'; },
+    async staffSignOut() { sessionStorage.removeItem(STAFF_KEY); },
+
+    // Busca un cliente (C-…) o un cupón (STK…) sin modificar nada
+    async staffLookup(raw) {
+      const code = String(raw).trim().toUpperCase();
+      const d = db();
+      if (/^C-\d+$/.test(code)) {
+        const u = Object.values(d.users).find(x => x.customer_code === code);
+        if (!u) throw new Error('No encontramos ese código de cliente');
+        return {
+          type: 'customer', name: u.name, customer_code: u.customer_code, visits_total: u.visits_total,
+          position: cardPos(u.visits_total), tier: tierFor(u.visits_total), last_visit_at: u.last_visit_at || null,
+          coupons: d.coupons.filter(c => c.customer_id === u.id && c.status === 'active' && new Date(c.expires_at) > new Date())
+            .map(c => ({ code: c.code, discount: c.discount, expires_at: c.expires_at }))
+        };
+      }
+      if (/^STK\d+-/.test(code)) {
+        const c = d.coupons.find(x => x.code === code);
+        if (!c) throw new Error('Cupón no encontrado');
+        const u = Object.values(d.users).find(x => x.id === c.customer_id);
+        const status = c.status === 'active' && new Date(c.expires_at) < new Date() ? 'expired' : c.status;
+        return { type: 'coupon', code: c.code, discount: c.discount, status, expires_at: c.expires_at, name: u && u.name };
+      }
+      throw new Error('Código no reconocido. Debe empezar con C- (cliente) o STK (cupón).');
+    },
     async sealVisit(code) {
       await delay(200);
       const d = db();
       const u = Object.values(d.users).find(x => x.customer_code === code.trim().toUpperCase());
       if (!u) throw new Error('No encontramos ese código de cliente');
       const first = u.visits_total === 0;
-      const { pos, coupon } = addVisit(d, u);
+      const { coupon } = addVisit(d, u);
+      u.last_visit_at = new Date().toISOString();
       let bonus = false;
       if (first && u.referred_by && d.users[u.referred_by]) {
         addVisit(d, d.users[u.referred_by]);
         addVisit(d, u);
         bonus = true;
       }
+      d.log.push({ type: 'visit', at: u.last_visit_at, name: u.name, customer_code: u.customer_code });
       save(d);
       return {
         name: u.name, customer_code: u.customer_code, visits_total: u.visits_total,
         position: cardPos(u.visits_total), tier: tierFor(u.visits_total),
-        coupon: coupon ? { discount: coupon.discount, code: coupon.code } : null, referral_bonus: bonus, _pos: pos
+        coupon: coupon ? { discount: coupon.discount, code: coupon.code } : null, referral_bonus: bonus
       };
     },
     async redeemCoupon(code) {
@@ -192,8 +224,15 @@
       if (new Date(c.expires_at) < new Date()) throw new Error('Este cupón está vencido');
       c.status = 'redeemed';
       const u = Object.values(d.users).find(x => x.id === c.customer_id);
+      d.log.push({ type: 'redeem', at: new Date().toISOString(), name: u && u.name, code: c.code, discount: c.discount });
       save(d);
       return { code: c.code, discount: c.discount, name: u && u.name };
+    },
+    async staffActivity() {
+      const d = db();
+      const start = new Date(); start.setHours(0, 0, 0, 0);
+      const events = d.log.filter(e => new Date(e.at) >= start).sort((a, b) => b.at.localeCompare(a.at));
+      return { visits: events.filter(e => e.type === 'visit').length, redeems: events.filter(e => e.type === 'redeem').length, events };
     },
     async listCustomers() { return Object.values(db().users); },
     demoAccounts() { return DEMO_SEED.map(s => ({ phone: s.phone, name: s.name, visits: s.visits })); },
@@ -262,6 +301,47 @@
     async staffSignOut() { await client().auth.signOut(); },
     async sealVisit(code) { return ok(await client().rpc('seal_visit', { p_code: code })); },
     async redeemCoupon(code) { return ok(await client().rpc('redeem_coupon', { p_code: code })); },
+
+    async staffLookup(raw) {
+      const code = String(raw).trim().toUpperCase();
+      const c = client();
+      if (/^C-\d+$/.test(code)) {
+        const p = ok(await c.from('profiles').select('*').eq('customer_code', code).maybeSingle());
+        if (!p) throw new Error('No encontramos ese código de cliente');
+        const [cp, lv] = await Promise.all([
+          c.from('coupons').select('code,discount,expires_at').eq('customer_id', p.id).eq('status', 'active')
+            .gte('expires_at', new Date().toISOString()).order('created_at'),
+          c.from('visits').select('created_at').eq('customer_id', p.id).eq('source', 'staff')
+            .order('created_at', { ascending: false }).limit(1)
+        ]);
+        return {
+          type: 'customer', name: p.name, customer_code: p.customer_code, visits_total: p.visits_total,
+          position: cardPos(p.visits_total), tier: tierFor(p.visits_total),
+          last_visit_at: (ok(lv)[0] || {}).created_at || null, coupons: ok(cp)
+        };
+      }
+      if (/^STK\d+-/.test(code)) {
+        const cp = ok(await c.from('coupons').select('code,discount,status,expires_at,customer_id').eq('code', code).maybeSingle());
+        if (!cp) throw new Error('Cupón no encontrado');
+        const p = ok(await c.from('profiles').select('name').eq('id', cp.customer_id).maybeSingle());
+        const status = cp.status === 'active' && new Date(cp.expires_at) < new Date() ? 'expired' : cp.status;
+        return { type: 'coupon', code: cp.code, discount: cp.discount, status, expires_at: cp.expires_at, name: p && p.name };
+      }
+      throw new Error('Código no reconocido. Debe empezar con C- (cliente) o STK (cupón).');
+    },
+    async staffActivity() {
+      const start = new Date(); start.setHours(0, 0, 0, 0);
+      const iso = start.toISOString();
+      const c = client();
+      const [v, r] = await Promise.all([
+        c.from('visits').select('created_at,profiles(name,customer_code)').eq('source', 'staff').gte('created_at', iso).order('created_at', { ascending: false }).limit(60),
+        c.from('coupons').select('code,discount,redeemed_at,profiles(name)').eq('status', 'redeemed').gte('redeemed_at', iso).order('redeemed_at', { ascending: false }).limit(60)
+      ]);
+      const visits = ok(v).map(x => ({ type: 'visit', at: x.created_at, name: x.profiles && x.profiles.name, customer_code: x.profiles && x.profiles.customer_code }));
+      const redeems = ok(r).map(x => ({ type: 'redeem', at: x.redeemed_at, name: x.profiles && x.profiles.name, code: x.code, discount: x.discount }));
+      const events = [...visits, ...redeems].sort((p, q) => q.at.localeCompare(p.at));
+      return { visits: visits.length, redeems: redeems.length, events };
+    },
     async listCustomers() { return []; },
     demoAccounts() { return []; },
     async reset() { }
