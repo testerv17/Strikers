@@ -13,6 +13,5 @@ window.STRIKERS_CONFIG = {
   OTP_CHANNEL: 'sms',      // 'sms' | 'whatsapp' (WhatsApp requiere Twilio en Supabase)
   OTP_LENGTH: 6,           // largo del código en Supabase (por defecto 6)
 
-  DEMO_OTP: '1234',        // código que acepta el modo demo (cliente)
-  DEMO_STAFF_PIN: '1234'   // PIN del mesero en modo demo
+  DEMO_OTP: '1234'         // código que acepta el modo demo
 };
